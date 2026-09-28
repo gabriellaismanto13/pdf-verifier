@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verifikasi PDF vs Excel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f4f6fb;min-height:100vh;padding:24px 16px;color:#1a1a1a}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.sub{color:#666;font-size:14px;margin-bottom:28px}
+.card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:24px;margin-bottom:20px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:16px;color:#374151}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.drop{border:2px dashed #d1d5db;border-radius:8px;padding:28px 16px;text-align:center;cursor:pointer;transition:.2s;background:#fafafa}
+.drop:hover,.drop.drag{border-color:#6366f1;background:#eef2ff}
+.drop p{font-size:14px;color:#6b7280;margin-top:6px}
+.drop .ico{font-size:32px}
+input[type=file]{display:none}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px}
+.field input{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;outline:none}
+.field input:focus{border-color:#6366f1;box-shadow:0 0 0 3px #e0e7ff}
+.btn{width:100%;padding:12px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.btn:hover{background:#4f46e5}
+.btn:disabled{background:#a5b4fc;cursor:not-allowed}
+.spin{width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{background:#eef2ff;color:#4338ca;font-size:12px;padding:3px 10px;border-radius:99px;display:flex;align-items:center;gap:5px}
+.tag button{background:none;border:none;cursor:pointer;color:#818cf8;font-size:14px;line-height:1}
+.tag button:hover{color:#ef4444}
+.results{display:none}
+.summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.s-card{flex:1;min-width:130px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;text-align:center}
+.s-card .num{font-size:28px;font-weight:700}
+.s-card .lbl{font-size:12px;color:#6b7280;margin-top:2px}
+.ok .num{color:#16a34a} .warn .num{color:#d97706} .err .num{color:#dc2626}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f9fafb;padding:9px 10px;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+.b-ok{background:#dcfce7;color:#15803d}
+.b-mis{background:#fef9c3;color:#854d0e}
+.b-err{background:#fee2e2;color:#b91c1c}
+.b-nf{background:#f3f4f6;color:#6b7280}
+.chk-row{display:flex;flex-direction:column;gap:3px}
+.chk{font-size:12px;display:flex;gap:6px;align-items:center}
+.chk .ico{font-size:14px}
+.detail-btn{background:none;border:1px solid #e5e7eb;border-radius:6px;padding:3px 8px;font-size:11px;color:#6366f1;cursor:pointer}
+.detail-btn:hover{background:#eef2ff}
+.modal-bg{display:none;position:fixed;inset:0;background:#0007;z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:12px}
+.modal pre{font-size:11px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px;white-space:pre-wrap;overflow-x:auto}
+.modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af}
+.export-btn{background:#fff;border:1.5px solid #6366f1;color:#6366f1;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px}
+.export-btn:hover{background:#eef2ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📋 Verifikasi PDF vs Excel</h1>
+  <p class="sub">Upload PDF invoice (berpassword) + file Excel, langsung cek kesesuaian data.</p>
+
+  <div class="card">
+    <h2>1. Upload File</h2>
+    <div class="grid2">
+      <div>
+        <div class="drop" id="dropPdf" onclick="document.getElementById('pdfInput').click()">
+          <div class="ico">📄</div>
+          <p>PDF Invoice (bisa banyak)</p>
+        </div>
+        <input type="file" id="pdfInput" multiple accept=".pdf">
+        <div class="tag-list" id="pdfTags"></div>
+      </div>
+      <div>
+        <div class="drop" id="dropXl" onclick="document.getElementById('xlInput').click()">
+          <div class="ico">📊</div>
+          <p>File Excel (.xlsx / .xls)</p>
+        </div>
+        <input type="file" id="xlInput" accept=".xlsx,.xls">
+        <div class="tag-list" id="xlTag"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Password PDF</h2>
+    <div class="field">
+      <label for="pw">Password (sama untuk semua PDF)</label>
+      <input type="password" id="pw" placeholder="Masukkan password PDF...">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Verifikasi</h2>
+    <button class="btn" id="verifyBtn" onclick="doVerify()">
+      <span class="spin" id="spin"></span>
+      <span id="btnTxt">🔍 Mulai Verifikasi</span>
+    </button>
+  </div>
+
+  <div class="results card" id="resultsCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">Hasil Verifikasi</h2>
+      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div style="overflow-x:auto">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>File PDF</th>
+            <th>Status</th>
+            <th>Nomor Dokumen (PDF)</th>
+            <th>Pengecekan</th>
+            <th>Baris Excel</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modalTitle">Detail</h3>
+    <pre id="modalBody"></pre>
+  </div>
+</div>
+
+<script>
+let pdfFiles = [];
+let xlFile = null;
+let lastResults = [];
+
+// ── drag & drop ──────────────────────────────────────────────────────────────
+function setupDrop(zoneId, inputId, multi) {
+  const zone = document.getElementById(zoneId);
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const fs = Array.from(e.dataTransfer.files);
+    if (multi) addPdfs(fs.filter(f => f.name.endsWith('.pdf')));
+    else addXl(fs[0]);
+  });
+  document.getElementById(inputId).addEventListener('change', function() {
+    if (multi) addPdfs(Array.from(this.files));
+    else addXl(this.files[0]);
+    this.value = '';
+  });
+}
+setupDrop('dropPdf','pdfInput',true);
+setupDrop('dropXl','xlInput',false);
+
+function addPdfs(files) {
+  files.forEach(f => { if (!pdfFiles.find(x => x.name===f.name)) pdfFiles.push(f); });
+  renderPdfTags();
+}
+function removePdf(name) {
+  pdfFiles = pdfFiles.filter(f => f.name !== name);
+  renderPdfTags();
+}
+function renderPdfTags() {
+  const el = document.getElementById('pdfTags');
+  el.innerHTML = pdfFiles.map(f =>
+    `<div class="tag">📄 ${f.name}<button onclick="removePdf('${f.name.replace(/'/g,"\\'")}')">✕</button></div>`
+  ).join('');
+}
+function addXl(f) {
+  if (!f) return;
+  xlFile = f;
+  document.getElementById('xlTag').innerHTML =
+    `<div class="tag">📊 ${f.name}<button onclick="removeXl()">✕</button></div>`;
+}
+function removeXl() {
+  xlFile = null;
+  document.getElementById('xlTag').innerHTML = '';
+}
+
+// ── verify ───────────────────────────────────────────────────────────────────
+async function doVerify() {
+  if (!pdfFiles.length) return alert('Upload minimal 1 file PDF.');
+  if (!xlFile) return alert('Upload file Excel.');
+
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  document.getElementById('spin').style.display = 'inline-block';
+  document.getElementById('btnTxt').textContent = 'Memverifikasi...';
+
+  const fd = new FormData();
+  pdfFiles.forEach(f => fd.append('pdfs', f));
+  fd.append('excel', xlFile);
+  fd.append('password', document.getElementById('pw').value);
+
+  try {
+    const res = await fetch('/verify', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Server error');
+    }
+    const data = await res.json();
+    lastResults = data.results;
+    renderResults(data.results);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('spin').style.display = 'none';
+    document.getElementById('btnTxt').textContent = '🔍 Verifikasi Ulang';
+  }
+}
+
+function renderResults(results) {
+  const card = document.getElementById('resultsCard');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth' });
+
+  let ok=0, mis=0, err=0, nf=0;
+  results.forEach(r => {
+    if (r.status==='OK') ok++;
+    else if (r.status==='MISMATCH') mis++;
+    else if (r.status==='NOT_FOUND') nf++;
+    else err++;
+  });
+
+  document.getElementById('summary').innerHTML = `
+    <div class="s-card ok"><div class="num">${ok}</div><div class="lbl">✅ Sesuai</div></div>
+    <div class="s-card warn"><div class="num">${mis}</div><div class="lbl">⚠ Tidak Sesuai</div></div>
+    <div class="s-card err"><div class="num">${nf}</div><div class="lbl">❓ Tidak Ditemukan</div></div>
+    <div class="s-card"><div class="num">${err}</div><div class="lbl">❌ Error</div></div>
+  `;
+
+  const tbody = document.getElementById('resultBody');
+  tbody.innerHTML = results.map((r,i) => {
+    const f = r.pdf_fields || {};
+    const m = r.match || {};
+    const checks = m.checks || {};
+
+    let badge, badgeCls;
+    if (r.status==='OK') { badge='✅ Sesuai'; badgeCls='b-ok'; }
+    else if (r.status==='MISMATCH') { badge='⚠ Tidak Sesuai'; badgeCls='b-mis'; }
+    else if (r.status==='NOT_FOUND') { badge='❓ Tidak Ditemukan'; badgeCls='b-nf'; }
+    else { badge='❌ Error'; badgeCls='b-err'; }
+
+    const nomor = f.nomor_faktur_pajak || f.nomor_dokumen || '-';
+    const baris = m.row_index ? `Baris ${m.row_index}` : '-';
+
+    const chkHtml = Object.entries(checks).map(([k,v]) =>
+      `<div class="chk"><span class="ico">${v.match?'✅':'⚠'}</span>
+       <span><b>${k}</b>: PDF <code>${fmtNum(v.pdf)}</code> vs Excel <code>${fmtNum(v.excel)}</code>
+       ${!v.match ? `<span style="color:#d97706">(selisih ${fmtNum(v.diff)})</span>` : ''}</span></div>`
+    ).join('');
+
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="max-width:180px;word-break:break-all">${r.filename}</td>
+      <td><span class="badge ${badgeCls}">${badge}</span>${r.error?`<div style="font-size:11px;color:#dc2626;margin-top:4px">${r.error}</div>`:''}</td>
+      <td style="font-size:12px;font-family:monospace">${nomor}</td>
+      <td><div class="chk-row">${chkHtml || '<span style="color:#9ca3af;font-size:12px">—</span>'}</div></td>
+      <td style="font-size:12px">${baris}</td>
+      <td><button class="detail-btn" onclick="showDetail(${i})">Lihat</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function fmtNum(n) {
+  if (n == null) return '-';
+  if (typeof n === 'number') return n.toLocaleString('id-ID');
+  return n;
+}
+
+function showDetail(i) {
+  const r = lastResults[i];
+  document.getElementById('modalTitle').textContent = r.filename;
+  const f = r.pdf_fields || {};
+  const m = r.match || {};
+  let txt = '── Data dari PDF ──\n';
+  txt += JSON.stringify(f, null, 2);
+  txt += '\n\n── Hasil Pencocokan ──\n';
+  txt += JSON.stringify({ status: m.status, row_index: m.row_index, checks: m.checks }, null, 2);
+  if (m.matched_row) {
+    txt += '\n\n── Baris Excel yang Cocok ──\n';
+    txt += JSON.stringify(m.matched_row, null, 2);
+  }
+  document.getElementById('modalBody').textContent = txt;
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalBg'))
+    document.getElementById('modalBg').classList.remove('open');
+}
+
+function exportCSV() {
+  if (!lastResults.length) return;
+  const rows = [['No','File PDF','Status','Nomor Dokumen','DPP PDF','DPP Excel','PPH PDF','PPH Excel','Baris Excel']];
+  lastResults.forEach((r,i) => {
+    const f = r.pdf_fields || {};
+    const m = r.match || {};
+    const c = m.checks || {};
+    rows.push([
+      i+1, r.filename, r.status,
+      f.nomor_faktur_pajak || f.nomor_dokumen || '',
+      c.DPP?.pdf || '', c.DPP?.excel || '',
+      c.PPH?.pdf || '', c.PPH?.excel || '',
+      m.row_index || '',
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'hasil_verifikasi.csv';
+  a.click();
+}
+</script>
+</body>
+</html>
